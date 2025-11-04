@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head}">
+    <title>Manage Users - School Attendance App</title>
+    <style>
+        .user-card {
+            transition: transform 0.2s;
+        }
+        .user-card:hover {
+            transform: translateY(-2px);
+        }
+        .role-badge {
+            font-size: 0.8rem;
+        }
+        .status-active {
+            border-left: 4px solid #28a745;
+        }
+        .status-inactive {
+            border-left: 4px solid #dc3545;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Manage Users</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a th:href="@{/admin/dashboard}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                        </a>
+                        <a th:href="@{/register}" class="btn btn-primary">
+                            <i class="bi bi-person-plus me-1"></i> Add New User
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <!-- User Statistics -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h4 class="text-primary" th:text="${#lists.size(users)}">0</h4>
+                            <p class="text-muted">Total Users</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h4 class="text-success" th:text="${#lists.size(users.?[role == T(com.schoolapp.model.User.UserRole).STUDENT])}">0</h4>
+                            <p class="text-muted">Students</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h4 class="text-info" th:text="${#lists.size(users.?[role == T(com.schoolapp.model.User.UserRole).TEACHER])}">0</h4>
+                            <p class="text-muted">Teachers</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h4 class="text-warning" th:text="${#lists.size(users.?[role == T(com.schoolapp.model.User.UserRole).ADMINISTRATOR])}">0</h4>
+                            <p class="text-muted">Administrators</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role Filter -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form th:action="@{/admin/users}" method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="roleFilter" class="form-label">Filter by Role</label>
+                            <select class="form-select" id="roleFilter" name="role">
+                                <option value="">All Roles</option>
+                                <option th:each="role : ${roles}"
+                                        th:value="${role.name()}"
+                                        th:text="${role.name()}"
+                                        th:selected="${selectedRole != null && selectedRole.name() == role.name()}">Role</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="bi bi-funnel me-1"></i> Apply Filter
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Users List -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        User Accounts
+                        <span th:if="${selectedRole != null}" class="badge bg-secondary ms-2" th:text="${selectedRole.name()}">Role</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>ID</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="user : ${users}"
+                                    th:class="${user.isActive ? 'status-active' : 'status-inactive'}">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar me-3">
+                                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                    <span th:text="${#strings.substring(user.firstName, 0, 1) + #strings.substring(user.lastName, 0, 1)}">AA</span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold" th:text="${user.getFullName()}">Full Name</div>
+                                                <small class="text-muted" th:if="${user.phoneNumber}" th:text="${user.phoneNumber}">Phone</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td th:text="${user.email}">Email</td>
+                                    <td>
+                                        <span class="badge role-badge" th:classappend="${user.role == T(com.schoolapp.model.User.UserRole).STUDENT ? 'bg-primary' : (user.role == T(com.schoolapp.model.User.UserRole).TEACHER ? 'bg-success' : 'bg-warning')}"
+                                              th:text="${user.role.name()}">Role</span>
+                                    </td>
+                                    <td>
+                                        <small th:text="${user.studentId != null ? user.studentId : (user.staffId != null ? user.staffId : 'N/A')}">ID</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge" th:classappend="${user.isActive ? 'bg-success' : 'bg-danger'}"
+                                              th:text="${user.isActive ? 'Active' : 'Inactive'}">Status</span>
+                                    </td>
+                                    <td>
+                                        <small th:text="${#temporals.format(user.createdAt, 'MMM dd, yyyy')}">Date</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <form th:if="${user.isActive}"
+                                                  th:action="@{/admin/users/{userId}/deactivate(userId=${user.id})}"
+                                                  method="post" class="d-inline">
+                                                <button type="submit" class="btn btn-outline-warning"
+                                                        onclick="return confirm('Are you sure you want to deactivate this user?')"
+                                                        title="Deactivate user">
+                                                    <i class="bi bi-pause"></i>
+                                                </button>
+                                            </form>
+                                            <form th:if="${!user.isActive}"
+                                                  th:action="@{/admin/users/{userId}/activate(userId=${user.id})}"
+                                                  method="post" class="d-inline">
+                                                <button type="submit" class="btn btn-outline-success"
+                                                        onclick="return confirm('Are you sure you want to activate this user?')"
+                                                        title="Activate user">
+                                                    <i class="bi bi-play"></i>
+                                                </button>
+                                            </form>
+                                            <button class="btn btn-outline-primary"
+                                                    th:disabled="${user.role == T(com.schoolapp.model.User.UserRole).ADMINISTRATOR and #lists.size(users.?[role == T(com.schoolapp.model.User.UserRole).ADMINISTRATOR]) == 1}"
+                                                    title="Edit user">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div th:if="${#lists.isEmpty(users)}" class="text-center py-4">
+                        <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">No users found for the selected criteria.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Guidelines -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">User Management Guidelines:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Student Accounts</h6>
+                            <ul class="small">
+                                <li>Must have a valid student ID</li>
+                                <li>Can view own attendance and class information</li>
+                                <li>Cannot book rooms directly</li>
+                                <li>Access limited to own data</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Teacher Accounts</h6>
+                            <ul class="small">
+                                <li>Must have a valid staff ID</li>
+                                <li>Can mark attendance for their classes</li>
+                                <li>Can book rooms for their classes</li>
+                                <li>Manage their class schedules</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Administrator Accounts</h6>
+                            <ul class="small">
+                                <li>Full system access and management</li>
+                                <li>Can manage all users and classes</li>
+                                <li>View all attendance and booking data</li>
+                                <li>System configuration and maintenance</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script>
+// Add search functionality
+function searchUsers() {
+    const input = document.getElementById('searchInput');
+    const filter = input.value.toUpperCase();
+    const table = document.querySelector('table tbody');
+    const rows = table.getElementsByTagName('tr');
+
+    for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        let found = false;
+
+        for (let j = 0; j < cells.length; j++) {
+            const cell = cells[j];
+            if (cell) {
+                const textValue = cell.textContent || cell.innerText;
+                if (textValue.toUpperCase().indexOf(filter) > -1) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        rows[i].style.display = found ? '' : 'none';
+    }
+}
+
+// Add keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'n') {
+        e.preventDefault();
+        window.location.href = '/register';
+    }
+});
+
+// Add confirmation for destructive actions
+document.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (form.action && (form.action.includes('deactivate') || form.action.includes('activate'))) {
+        // Additional confirmation logic can be added here
+    }
+});
+</script>
+</body>
+</html>
