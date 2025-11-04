@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head}">
+    <title>Teacher Dashboard - School Attendance App</title>
+</head>
+<body>
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Teacher Dashboard</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a th:href="@{/teacher/attendance}" class="btn btn-primary">
+                            <i class="bi bi-calendar-check me-1"></i> Mark Attendance
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <!-- Welcome Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Welcome back, <span th:text="${user.firstName}">Teacher</span>!</h5>
+                            <p class="card-text text-muted">
+                                Here's an overview of your teaching schedule and attendance summary.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-primary shadow h-100 py-2 dashboard-card">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                        Total Classes
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" th:text="${totalClasses}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-book stat-icon text-primary"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-success shadow h-100 py-2 dashboard-card">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        Today's Attendance
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" th:text="${todayRecords}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-calendar-check stat-icon text-success"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-info shadow h-100 py-2 dashboard-card">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Present Today
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                        <span th:text="${presentCount.values().stream().mapToLong(Long::longValue).sum()}">0</span>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-person-check stat-icon text-info"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-warning shadow h-100 py-2 dashboard-card">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                        Pending
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                        <span th:text="${totalClasses - todayAttendance.size()}">0</span>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="bi bi-clock stat-icon text-warning"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Classes Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">My Classes</h5>
+                            <a th:href="@{/teacher/my-classes}" class="btn btn-sm btn-outline-primary">
+                                View All
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3" th:each="class : ${classes}" th:if="${classStat.index < 4}">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h6 class="card-title" th:text="${class.name}">Class Name</h6>
+                                            <p class="card-text">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-book"></i> <span th:text="${class.subject}">Subject</span><br>
+                                                    <i class="bi bi-people"></i> <span th:text="${class.currentEnrollmentCount != null ? class.currentEnrollmentCount : 0}">0</span> / <span th:text="${class.maxStudents}">0</span> students<br>
+                                                    <i class="bi bi-geo-alt"></i> Grade <span th:text="${class.gradeLevel}">0</span>
+                                                </small>
+                                            </p>
+                                            <div class="d-grid gap-2">
+                                                <a th:href="@{/teacher/attendance(classId=${class.id})}" class="btn btn-primary btn-sm">
+                                                    <i class="bi bi-calendar-check me-1"></i> Mark Attendance
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12" th:if="${#lists.isEmpty(classes)}">
+                                    <div class="text-center py-4">
+                                        <i class="bi bi-book text-muted" style="font-size: 3rem;"></i>
+                                        <p class="text-muted mt-2">No classes assigned yet.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <div class="d-grid">
+                                        <a th:href="@{/teacher/attendance}" class="btn btn-primary">
+                                            <i class="bi bi-calendar-check me-2"></i> Mark Attendance
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="d-grid">
+                                        <a th:href="@{/teacher/booking}" class="btn btn-success">
+                                            <i class="bi bi-door-open me-2"></i> Book Room
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="d-grid">
+                                        <a th:href="@{/teacher/my-classes}" class="btn btn-info">
+                                            <i class="bi bi-book me-2"></i> My Classes
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="d-grid">
+                                        <a th:href="@{/profile}" class="btn btn-secondary">
+                                            <i class="bi bi-person me-2"></i> Profile
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>
