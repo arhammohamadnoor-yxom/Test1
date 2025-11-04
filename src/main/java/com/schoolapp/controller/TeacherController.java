@@ -33,7 +33,9 @@ public class TeacherController {
 
     private final AttendanceService attendanceService;
     private final AuthService authService;
+    private final RoomBookingService roomBookingService;
     private final ClassRepository classRepository;
+    private final RoomRepository roomRepository;
 
     @GetMapping("/dashboard")
     public String dashboard(Model model) {
