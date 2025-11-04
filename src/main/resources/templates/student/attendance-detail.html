@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head}">
+    <title>Attendance Detail - School Attendance App</title>
+</head>
+<body>
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Attendance Detail</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a th:href="@{/student/attendance}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Attendance
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <div th:if="${classEntity != null}" class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <span th:text="${classEntity.name}">Class Name</span> -
+                        <span th:text="${date}">Date</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div th:if="${attendanceRecord != null}">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6>Attendance Status</h6>
+                                <div class="alert" th:classappend="${attendanceRecord.isPresent() ? 'alert-success' : 'alert-danger'}">
+                                    <h4>
+                                        <span th:if="${attendanceRecord.isPresent()}" class="badge bg-success">PRESENT</span>
+                                        <span th:if="${attendanceRecord.isAbsent()}" class="badge bg-danger">ABSENT</span>
+                                    </h4>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Marked By</h6>
+                                <p class="mb-1">
+                                    <strong>Teacher:</strong> <span th:text="${attendanceRecord.teacher.getFullName()}">Teacher Name</span><br>
+                                    <small class="text-muted">Marked at: <span th:text="${#temporals.format(attendanceRecord.markedAt, 'yyyy-MM-dd HH:mm')}">Time</span></small>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div th:if="${attendanceRecord.notes != null and !attendanceRecord.notes.isEmpty()}" class="row mb-4">
+                            <div class="col-12">
+                                <h6>Notes</h6>
+                                <div class="alert alert-info">
+                                    <p class="mb-0" th:text="${attendanceRecord.notes}">Notes</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6>Class Information</h6>
+                                <p class="mb-1">
+                                    <strong>Subject:</strong> <span th:text="${classEntity.subject}">Subject</span><br>
+                                    <strong>Grade:</strong> <span th:text="${classEntity.gradeLevel}">Grade</span><br>
+                                    <strong>Teacher:</strong> <span th:text="${classEntity.teacher.getFullName()}">Teacher</span>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Date Information</h6>
+                                <p class="mb-1">
+                                    <strong>Date:</strong> <span th:text="${date}">Date</span><br>
+                                    <strong>Day of Week:</strong> <span th:text="${#temporals.format(#dates.create(date, 'yyyy-MM-dd'), 'EEEE')}">Day</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div th:if="${attendanceRecord == null}" class="text-center py-5">
+                        <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+                        <h4 class="text-muted mt-3">No Attendance Record</h4>
+                        <p class="text-muted">No attendance has been recorded for this class on this date.</p>
+                        <p class="text-muted">Please check back later or contact your teacher.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${classEntity == null}" class="alert alert-warning">
+                <h5>Class Not Found</h5>
+                <p>The class information could not be retrieved. Please try again.</p>
+                <a th:href="@{/student/attendance}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Attendance
+                </a>
+            </div>
+        </main>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>
