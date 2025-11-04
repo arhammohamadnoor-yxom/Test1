@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head}">
+    <title>My Attendance - School Attendance App</title>
+    <style>
+        .attendance-calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .calendar-day:hover {
+            background-color: #f8f9fa;
+        }
+        .calendar-day.present {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .calendar-day.absent {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .calendar-day.today {
+            border: 2px solid #007bff;
+            font-weight: bold;
+        }
+        .weekday-header {
+            font-weight: bold;
+            text-align: center;
+            padding: 5px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">My Attendance</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a th:href="@{/student/dashboard}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <!-- Selection Form -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form th:action="@{/student/attendance}" method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="classSelect" class="form-label">Select Class</label>
+                            <select class="form-select" id="classSelect" name="classId">
+                                <option value="">Choose a class...</option>
+                                <option th:each="class : ${enrolledClasses}"
+                                        th:value="${class.id}"
+                                        th:text="${class.name}"
+                                        th:selected="${class.id == selectedClassId}">Class Name</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="monthSelect" class="form-label">Month</label>
+                            <select class="form-select" id="monthSelect" name="month">
+                                <option value="1" th:selected="${selectedMonth == 1}">January</option>
+                                <option value="2" th:selected="${selectedMonth == 2}">February</option>
+                                <option value="3" th:selected="${selectedMonth == 3}">March</option>
+                                <option value="4" th:selected="${selectedMonth == 4}">April</option>
+                                <option value="5" th:selected="${selectedMonth == 5}">May</option>
+                                <option value="6" th:selected="${selectedMonth == 6}">June</option>
+                                <option value="7" th:selected="${selectedMonth == 7}">July</option>
+                                <option value="8" th:selected="${selectedMonth == 8}">August</option>
+                                <option value="9" th:selected="${selectedMonth == 9}">September</option>
+                                <option value="10" th:selected="${selectedMonth == 10}">October</option>
+                                <option value="11" th:selected="${selectedMonth == 11}">November</option>
+                                <option value="12" th:selected="${selectedMonth == 12}">December</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="yearSelect" class="form-label">Year</label>
+                            <select class="form-select" id="yearSelect" name="year">
+                                <option th:each="year : ${#numbers.sequence(2020, 2030)}"
+                                        th:value="${year}"
+                                        th:text="${year}"
+                                        th:selected="${year == selectedYear}">Year</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search me-1"></i> View
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Attendance Statistics -->
+            <div th:if="${selectedClass != null}" class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary" th:text="${attendancePercentage != null ? #numbers.formatDecimal(attendancePercentage, 1, 1) : '0'} + '%'">0%</h5>
+                            <p class="card-text">Overall Attendance</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-success" th:text="${attendanceStats.getOrDefault(T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).PRESENT, 0)}">0</h5>
+                            <p class="card-text">Days Present</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-danger" th:text="${attendanceStats.getOrDefault(T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).ABSENT, 0)}">0</h5>
+                            <p class="card-text">Days Absent</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-info" th:text="${attendanceStats.values().stream().mapToLong(Long::longValue).sum()}">0</h5>
+                            <p class="card-text">Total Days</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Calendar -->
+            <div th:if="${selectedClass != null}" class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <span th:text="${selectedClass.name}">Class Name</span> -
+                        <span th:text="${#temporals.format(selectedStartDate, 'MMMM yyyy')}">Month Year</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="attendance-calendar">
+                        <!-- Day headers -->
+                        <div class="weekday-header">Sun</div>
+                        <div class="weekday-header">Mon</div>
+                        <div class="weekday-header">Tue</div>
+                        <div class="weekday-header">Wed</div>
+                        <div class="weekday-header">Thu</div>
+                        <div class="weekday-header">Fri</div>
+                        <div class="weekday-header">Sat</div>
+
+                        <!-- Calendar days -->
+                        <div th:each="day : ${#numbers.sequence(1, 31)}"
+                             th:with="currentDate = ${#dates.create(selectedYear, selectedMonth, day)}">
+                            <div th:if="${#dates.month(currentDate) == selectedMonth - 1}"
+                                 th:class="'calendar-day ' +
+                                            ${attendanceByDate[currentDate]?.status == T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).PRESENT ? 'present' :
+                                            (attendanceByDate[currentDate]?.status == T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).ABSENT ? 'absent' : '')} +
+                                            ${#dates.isToday(currentDate) ? ' today' : ''}"
+                                 th:onclick="'viewAttendanceDetail(\'' + ${selectedClass.id} + '\', \'' + ${#dates.format(currentDate, 'yyyy-MM-dd')} + '\')'"
+                                 th:text="${day}">
+                                Day
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <span class="badge bg-success me-2">■ Present</span>
+                            <span class="badge bg-danger me-2">■ Absent</span>
+                            <span class="badge border border-primary me-2">■ No Data</span>
+                            <span class="badge border border-2 border-primary">■ Today</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div th:if="${selectedClass != null}" class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">Attendance Legend:</h6>
+                    <ul class="mb-0">
+                        <li><span class="badge bg-success">■</span> Present - You were marked as present for this day</li>
+                        <li><span class="badge bg-danger">■</span> Absent - You were marked as absent for this day</li>
+                        <li><span class="badge border border-primary">■</span> No Data - No attendance record found for this day</li>
+                        <li><span class="badge border border-2 border-primary">■</span> Today - Current date</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- No classes message -->
+            <div th:if="${#lists.isEmpty(enrolledClasses)}" class="text-center py-5">
+                <i class="bi bi-book text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">No Classes Enrolled</h4>
+                <p class="text-muted">You are not enrolled in any classes yet. Please contact your teacher or administrator.</p>
+            </div>
+        </main>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script>
+function viewAttendanceDetail(classId, date) {
+    window.location.href = `/student/attendance/detail?classId=${classId}&date=${date}`;
+}
+
+// Auto-submit when selection changes
+document.getElementById('classSelect').addEventListener('change', function() {
+    this.form.submit();
+});
+
+document.getElementById('monthSelect').addEventListener('change', function() {
+    this.form.submit();
+});
+
+document.getElementById('yearSelect').addEventListener('change', function() {
+    this.form.submit();
+});
+</script>
+</body>
+</html>
