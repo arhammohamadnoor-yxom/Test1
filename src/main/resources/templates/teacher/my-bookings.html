@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head}">
+    <title>My Bookings - School Attendance App</title>
+    <style>
+        .booking-card {
+            transition: transform 0.2s;
+        }
+        .booking-card:hover {
+            transform: translateY(-2px);
+        }
+        .status-confirmed {
+            border-left: 4px solid #28a745;
+        }
+        .status-cancelled {
+            border-left: 4px solid #dc3545;
+        }
+        .upcoming {
+            background-color: #e8f5e8;
+        }
+        .past {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">My Bookings</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a th:href="@{/teacher/booking}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i> Book New Room
+                        </a>
+                        <a th:href="@{/teacher/dashboard}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <div th:if="${#lists.isEmpty(bookings)}" class="text-center py-5">
+                <i class="bi bi-calendar-x text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">No Room Bookings</h4>
+                <p class="text-muted">You haven't made any room bookings yet.</p>
+                <a th:href="@{/teacher/booking}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Book Your First Room
+                </a>
+            </div>
+
+            <div th:if="${!#lists.isEmpty(bookings)}">
+                <!-- Upcoming Bookings -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Upcoming Bookings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-6 mb-3" th:each="booking : ${bookings}"
+                                 th:if="${booking.startTime.isAfter(T(java.time.LocalDateTime).now()) or booking.startTime.isEqual(T(java.time.LocalDateTime).now())"
+                                 th:class="'booking-card ' + (booking.startTime.isAfter(T(java.time.LocalDateTime).now()) ? 'upcoming' : 'past')">
+                                <div class="card h-100" th:class="${booking.status.name() == 'CONFIRMED' ? 'status-confirmed' : 'status-cancelled'}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="card-title mb-0" th:text="${booking.title}">Booking Title</h6>
+                                            <span class="badge" th:classappend="${booking.status.name() == 'CONFIRMED' ? 'bg-success' : 'bg-danger'}"
+                                                  th:text="${booking.statusDisplay}">Status</span>
+                                        </div>
+
+                                        <p class="card-text">
+                                            <small class="text-muted">
+                                                <i class="bi bi-door-open"></i> <span th:text="${booking.room.name}">Room</span><br>
+                                                <i class="bi bi-calendar"></i> <span th:text="${booking.dateDisplay}">Date</span><br>
+                                                <i class="bi bi-clock"></i> <span th:text="${booking.timeRangeDisplay}">Time</span><br>
+                                                <i class="bi bi-hourglass"></i> <span th:text="${booking.durationDisplay}">Duration</span><br>
+                                                <i class="bi bi-people"></i> <span th:text="${booking.numberOfParticipants}">0</span> participants
+                                            </small>
+                                        </p>
+
+                                        <div th:if="${booking.class_ != null}" class="mb-2">
+                                            <small class="text-info">
+                                                <i class="bi bi-book"></i> <span th:text="${booking.class_.name}">Class</span>
+                                            </small>
+                                        </div>
+
+                                        <div th:if="${booking.notes != null and !booking.notes.isEmpty()}" class="mb-2">
+                                            <small class="text-muted">
+                                                <i class="bi bi-chat-text"></i> <span th:text="${#strings.abbreviate(booking.notes, 50)}">Notes</span>
+                                            </small>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted" th:text="${#temporals.format(booking.createdAt, 'MMM dd, yyyy')}">Created</small>
+                                            <div class="btn-group btn-group-sm">
+                                                <button th:if="${booking.isConfirmed() and booking.startTime.isAfter(T(java.time.LocalDateTime).now())}"
+                                                        th:onclick="'cancelBooking(\'' + ${booking.id} + '\')'"
+                                                        class="btn btn-outline-danger"
+                                                        title="Cancel booking">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                                <button class="btn btn-outline-primary"
+                                                        th:onclick="'viewBookingDetails(\'' + ${booking.id} + '\')'"
+                                                        title="View details">
+                                                    <i class="bi bi-info-circle"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Past Bookings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Past Bookings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Room</th>
+                                        <th>Purpose</th>
+                                        <th>Date</th>
+                                        <th>Time</th>
+                                        <th>Duration</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="booking : ${bookings}"
+                                       th:if="${booking.startTime.isBefore(T(java.time.LocalDateTime).now())}"
+                                       th:class="${booking.status.name() == 'CONFIRMED' ? 'status-confirmed' : 'status-cancelled'}">
+                                        <td>
+                                            <div th:text="${booking.room.name}">Room</div>
+                                            <small class="text-muted" th:text="${booking.room.type}">Type</small>
+                                        </td>
+                                        <td>
+                                            <div th:text="${booking.title}">Title</div>
+                                            <small class="text-muted" th:if="${booking.class_ != null}" th:text="${booking.class_.name}">Class</small>
+                                        </td>
+                                        <td th:text="${booking.dateDisplay}">Date</td>
+                                        <td th:text="${booking.timeRangeDisplay}">Time</td>
+                                        <td th:text="${booking.durationDisplay}">Duration</td>
+                                        <td>
+                                            <span class="badge" th:classappend="${booking.status.name() == 'CONFIRMED' ? 'bg-success' : 'bg-danger'}"
+                                                  th:text="${booking.statusDisplay}">Status</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div th:if="${!#lists.isEmpty(bookings)}" class="card mt-4">
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="stat-item">
+                                <h4 class="text-primary" th:text="${bookings.size()}">0</h4>
+                                <p class="text-muted">Total Bookings</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-item">
+                                <h4 class="text-success" th:text="${bookings.?[status == T(com.schoolapp.model.RoomBooking.BookingStatus).CONFIRMED].size()}">0</h4>
+                                <p class="text-muted">Confirmed</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-item">
+                                <h4 class="text-warning" th:text="${bookings.?[status == T(com.schoolapp.model.RoomBooking.BookingStatus).CANCELLED].size()}">0</h4>
+                                <p class="text-muted">Cancelled</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-item">
+                                <h4 class="text-info" th:text="${bookings.?[startTime.isAfter(T(java.time.LocalDateTime).now())].size()}">0</h4>
+                                <p class="text-muted">Upcoming</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script>
+function cancelBooking(bookingId) {
+    if (confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/teacher/booking/cancel';
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'bookingId';
+        input.value = bookingId;
+
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function viewBookingDetails(bookingId) {
+    // In a real implementation, this could open a modal with detailed booking information
+    alert('Booking details functionality would be implemented here. Booking ID: ' + bookingId);
+}
+
+// Add visual feedback for interactive elements
+document.addEventListener('DOMContentLoaded', function() {
+    // Highlight current day in calendar if any
+    const today = new Date();
+    const todayElements = document.querySelectorAll('.today');
+    todayElements.forEach(element => {
+        element.style.backgroundColor = '#e3f2fd';
+        element.style.border = '2px solid #2196f3';
+    });
+});
+</script>
+</body>
+</html>
