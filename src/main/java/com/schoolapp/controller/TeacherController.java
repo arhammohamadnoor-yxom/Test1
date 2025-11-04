@@ -243,4 +243,75 @@ public class TeacherController {
             return "redirect:/teacher/dashboard";
         }
     }
+
+    // Room Booking Methods
+    @GetMapping("/booking")
+    public String bookingPage(Model model) {
+        try {
+            User currentUser = authService.getCurrentUser();
+            List<Class> teacherClasses = classRepository.findByTeacherId(currentUser.getId());
+            List<Room> rooms = roomRepository.findActiveRooms();
+            List<RoomBooking> upcomingBookings = roomBookingService.getUpcomingBookingsForTeacher(currentUser.getId());
+
+            model.addAttribute("user", currentUser);
+            model.addAttribute("classes", teacherClasses);
+            model.addAttribute("rooms", rooms);
+            model.addAttribute("upcomingBookings", upcomingBookings);
+
+            return "teacher/booking";
+        } catch (Exception e) {
+            log.error("Error loading booking page", e);
+            return "redirect:/teacher/dashboard";
+        }
+    }
+
+    @PostMapping("/booking/create")
+    public String createBooking(@Valid @ModelAttribute RoomBookingRequest request,
+                               RedirectAttributes redirectAttributes) {
+        try {
+            RoomBooking booking = roomBookingService.createBooking(request);
+            redirectAttributes.addFlashAttribute("message", "Room booked successfully!");
+            return "redirect:/teacher/booking";
+
+        } catch (Exception e) {
+            log.error("Error creating booking", e);
+            redirectAttributes.addFlashAttribute("error", "Failed to book room: " + e.getMessage());
+            return "redirect:/teacher/booking";
+        }
+    }
+
+    @PostMapping("/booking/cancel")
+    public String cancelBooking(@RequestParam UUID bookingId,
+                               RedirectAttributes redirectAttributes) {
+        try {
+            roomBookingService.cancelBooking(bookingId);
+            redirectAttributes.addFlashAttribute("message", "Booking cancelled successfully");
+            return "redirect:/teacher/booking";
+
+        } catch (Exception e) {
+            log.error("Error cancelling booking", e);
+            redirectAttributes.addFlashAttribute("error", "Failed to cancel booking: " + e.getMessage());
+            return "redirect:/teacher/booking";
+        }
+    }
+
+    @GetMapping("/booking/my-bookings")
+    public String myBookings(Model model) {
+        try {
+            User currentUser = authService.getCurrentUser();
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime oneMonthLater = now.plusMonths(1);
+
+            List<RoomBooking> bookings = roomBookingService.getBookingsForTeacher(
+                    currentUser.getId(), now, oneMonthLater);
+
+            model.addAttribute("user", currentUser);
+            model.addAttribute("bookings", bookings);
+
+            return "teacher/my-bookings";
+        } catch (Exception e) {
+            log.error("Error loading my bookings", e);
+            return "redirect:/teacher/booking";
+        }
+    }
 }
