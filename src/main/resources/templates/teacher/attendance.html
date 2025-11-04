@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head}">
+    <title>Mark Attendance - School Attendance App</title>
+    <style>
+        .attendance-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .status-present {
+            background-color: #d4edda;
+        }
+        .status-absent {
+            background-color: #f8d7da;
+        }
+        .attendance-checkbox {
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Mark Attendance</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a th:href="@{/teacher/dashboard}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <!-- Selection Form -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form th:action="@{/teacher/attendance}" method="get" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="classSelect" class="form-label">Select Class</label>
+                            <select class="form-select" id="classSelect" name="classId">
+                                <option value="">Choose a class...</option>
+                                <option th:each="class : ${classes}"
+                                        th:value="${class.id}"
+                                        th:text="${class.displayName}"
+                                        th:selected="${class.id == selectedClassId}">Class Name</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="dateSelect" class="form-label">Date</label>
+                            <input type="date" class="form-control" id="dateSelect" name="date" th:value="${selectedDate}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search me-1"></i> Load
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Attendance Marking Form -->
+            <div th:if="${selectedClass != null}" class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <span th:text="${selectedClass.name}">Class Name</span> -
+                        <span th:text="${selectedDate}">Date</span>
+                    </h5>
+                    <div class="btn-group">
+                        <form th:action="@{/teacher/attendance/mark-all-present}" method="post" class="d-inline">
+                            <input type="hidden" name="classId" th:value="${selectedClass.id}">
+                            <input type="hidden" name="date" th:value="${selectedDate}">
+                            <button type="submit" class="btn btn-success btn-sm"
+                                    onclick="return confirm('Mark all students as present?')">
+                                <i class="bi bi-check-circle me-1"></i> Mark All Present
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/teacher/attendance/mark}" method="post" id="attendanceForm">
+                        <input type="hidden" name="classId" th:value="${selectedClass.id}">
+                        <input type="hidden" name="date" th:value="${selectedDate}">
+
+                        <div th:if="${#lists.isEmpty(enrolledStudents)}" class="text-center py-4">
+                            <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-2">No students enrolled in this class.</p>
+                        </div>
+
+                        <div th:if="${!#lists.isEmpty(enrolledStudents)}">
+                            <div class="table-responsive">
+                                <table class="table table-striped attendance-table">
+                                    <thead>
+                                        <tr>
+                                            <th width="5%">#</th>
+                                            <th width="25%">Student Name</th>
+                                            <th width="15%">Student ID</th>
+                                            <th width="15%">Status</th>
+                                            <th width="30%">Notes</th>
+                                            <th width="10%">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="enrollment, stat : ${enrolledStudents}">
+                                            <td th:text="${stat.count}">1</td>
+                                            <td th:text="${enrollment.student.getFullName()}">Student Name</td>
+                                            <td th:text="${enrollment.student.studentId}">Student ID</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <input type="radio" class="btn-check" th:name="'status_' + ${enrollment.student.id}"
+                                                           th:id="'present_' + ${enrollment.student.id}" value="PRESENT"
+                                                           th:checked="${attendanceByStudent[enrollment.student.id]?.status == T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).PRESENT}">
+                                                    <label class="btn btn-outline-success" th:for="'present_' + ${enrollment.student.id}">
+                                                        <i class="bi bi-check-circle"></i> Present
+                                                    </label>
+
+                                                    <input type="radio" class="btn-check" th:name="'status_' + ${enrollment.student.id}"
+                                                           th:id="'absent_' + ${enrollment.student.id}" value="ABSENT"
+                                                           th:checked="${attendanceByStudent[enrollment.student.id]?.status == T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).ABSENT}">
+                                                    <label class="btn btn-outline-danger" th:for="'absent_' + ${enrollment.student.id}">
+                                                        <i class="bi bi-x-circle"></i> Absent
+                                                    </label>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm"
+                                                       th:name="'notes_' + ${enrollment.student.id}"
+                                                       th:value="${attendanceByStudent[enrollment.student.id]?.notes}"
+                                                       placeholder="Add notes (optional)">
+                                            </td>
+                                            <td>
+                                                <span th:if="${attendanceByStudent[enrollment.student.id]?.status == T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).PRESENT}"
+                                                      class="badge bg-success">Already Marked</span>
+                                                <span th:if="${attendanceByStudent[enrollment.student.id]?.status == T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).ABSENT}"
+                                                      class="badge bg-danger">Already Marked</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between">
+                                        <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                            <i class="bi bi-arrow-clockwise me-1"></i> Reset
+                                        </button>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-save me-1"></i> Save Attendance
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div th:if="${selectedClass != null}" class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">Instructions:</h6>
+                    <ul class="mb-0">
+                        <li>Select "Present" or "Absent" for each student</li>
+                        <li>Add optional notes for absent students (e.g., sick, family emergency)</li>
+                        <li>Use "Mark All Present" for quick attendance marking</li>
+                        <li>Click "Save Attendance" to record the attendance</li>
+                        <li>You can modify attendance later if needed</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script>
+function resetForm() {
+    if (confirm('Are you sure you want to reset all attendance selections?')) {
+        document.getElementById('attendanceForm').reset();
+    }
+}
+
+// Auto-submit when class or date changes
+document.getElementById('classSelect').addEventListener('change', function() {
+    this.form.submit();
+});
+
+document.getElementById('dateSelect').addEventListener('change', function() {
+    this.form.submit();
+});
+
+// Set max date to today
+document.getElementById('dateSelect').max = new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>
