@@ -1,12 +1,17 @@
 package com.schoolapp.controller;
 
 import com.schoolapp.dto.AttendanceUpdateRequest;
+import com.schoolapp.dto.RoomBookingRequest;
 import com.schoolapp.model.AttendanceRecord;
 import com.schoolapp.model.Class;
+import com.schoolapp.model.Room;
+import com.schoolapp.model.RoomBooking;
 import com.schoolapp.model.User;
 import com.schoolapp.service.AttendanceService;
 import com.schoolapp.service.AuthService;
+import com.schoolapp.service.RoomBookingService;
 import com.schoolapp.repository.ClassRepository;
+import com.schoolapp.repository.RoomRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
