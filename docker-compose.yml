@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: schoolapp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: schoolapp
+      POSTGRES_USER: schoolapp
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - schoolapp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U schoolapp -d schoolapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Spring Boot Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: schoolapp-app
+    restart: unless-stopped
+    environment:
+      # Database Configuration
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/schoolapp
+      SPRING_DATASOURCE_USERNAME: schoolapp
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-password}
+
+      # Flyway Configuration
+      SPRING_FLYWAY_ENABLED: true
+      SPRING_FLYWAY_BASELINE-ON-MIGRATE: true
+
+      # Application Configuration
+      SPRING_PROFILES_ACTIVE: production
+      SERVER_PORT: 8080
+
+      # Logging
+      LOGGING_LEVEL_COM_SCHOOLAPP: INFO
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: WARN
+
+      # Session Configuration
+      SERVER_SERVLET_SESSION_TIMEOUT: 30m
+      SERVER_SERVLET_SESSION_COOKIE_HTTP-ONLY: true
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: false
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - schoolapp-network
+    volumes:
+      - app_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    container_name: schoolapp-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    networks:
+      - schoolapp-network
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  schoolapp-network:
+    driver: bridge
