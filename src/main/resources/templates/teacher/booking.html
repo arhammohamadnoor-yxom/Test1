@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head}">
+    <title>Book Rooms - School Attendance App</title>
+    <style>
+        .room-card {
+            transition: transform 0.2s;
+        }
+        .room-card:hover {
+            transform: translateY(-2px);
+        }
+        .booking-time {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .status-confirmed {
+            border-left: 4px solid #28a745;
+        }
+        .status-cancelled {
+            border-left: 4px solid #dc3545;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Book Rooms</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a th:href="@{/teacher/dashboard}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                        </a>
+                        <a th:href="@{/teacher/booking/my-bookings}" class="btn btn-outline-primary">
+                            <i class="bi bi-calendar-week me-1"></i> My Bookings
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <!-- Room Booking Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Book a Room</h5>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/teacher/booking/create}" method="post" th:object="${roomBookingRequest}">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="room" class="form-label">Select Room</label>
+                                <select class="form-select" th:field="*{roomId}" required>
+                                    <option value="">Choose a room...</option>
+                                    <option th:each="room : ${rooms}"
+                                            th:value="${room.id}"
+                                            th:text="${room.getFullDisplayName()}">Room Name</option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('roomId')}">
+                                    Please select a room
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="class" class="form-label">Related Class (Optional)</label>
+                                <select class="form-select" th:field="*{classId}">
+                                    <option value="">No specific class</option>
+                                    <option th:each="class : ${classes}"
+                                            th:value="${class.id}"
+                                            th:text="${class.name}">Class Name</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="title" class="form-label">Purpose/Title</label>
+                                <input type="text" class="form-control" th:field="*{title}" placeholder="e.g., Science practical, Group discussion" required>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('title')}">
+                                    Please enter a title for the booking
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="participants" class="form-label">Number of Participants</label>
+                                <input type="number" class="form-control" th:field="*{numberOfParticipants}" min="1" placeholder="Number of people" required>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('numberOfParticipants')}">
+                                    Please enter a valid number of participants
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="startTime" class="form-label">Start Time</label>
+                                <input type="datetime-local" class="form-control" th:field="*{startTime}" required>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('startTime')}">
+                                    Please select a valid start time
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="endTime" class="form-label">End Time</label>
+                                <input type="datetime-local" class="form-control" th:field="*{endTime}" required>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('endTime')}">
+                                    Please select a valid end time
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="notes" class="form-label">Additional Notes (Optional)</label>
+                                <textarea class="form-control" th:field="*{notes}" rows="3" placeholder="Any special requirements or notes..."></textarea>
+                            </div>
+
+                            <div class="col-12 mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-calendar-plus me-2"></i>Book Room
+                                </button>
+                                <button type="reset" class="btn btn-secondary ms-2">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Available Rooms -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Available Rooms</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-4 col-md-6 mb-3" th:each="room : ${rooms}">
+                            <div class="card room-card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title" th:text="${room.name}">Room Name</h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="bi bi-tag"></i> <span th:text="${room.type}">Type</span><br>
+                                            <i class="bi bi-people"></i> Capacity: <span th:text="${room.capacity}">0</span><br>
+                                            <i class="bi bi-geo-alt"></i> <span th:text="${room.location != null ? room.location : 'No location'}">Location</span>
+                                        </small>
+                                    </p>
+                                    <div th:if="${room.equipment != null}" class="mb-2">
+                                        <small class="text-info">
+                                            <i class="bi bi-tools"></i> Equipment available
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Bookings -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Your Upcoming Bookings</h5>
+                </div>
+                <div class="card-body">
+                    <div th:if="${#lists.isEmpty(upcomingBookings)}" class="text-center py-4">
+                        <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">You have no upcoming bookings.</p>
+                    </div>
+
+                    <div th:if="${!#lists.isEmpty(upcomingBookings)}">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Room</th>
+                                        <th>Purpose</th>
+                                        <th>Date & Time</th>
+                                        <th>Duration</th>
+                                        <th>Participants</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="booking : ${upcomingBookings}"
+                                        th:class="${booking.status.name() == 'CONFIRMED' ? 'status-confirmed' : 'status-cancelled'}">
+                                        <td>
+                                            <div th:text="${booking.room.name}">Room Name</div>
+                                            <small class="text-muted" th:text="${booking.room.type}">Room Type</small>
+                                        </td>
+                                        <td>
+                                            <div th:text="${booking.title}">Title</div>
+                                            <small class="text-muted" th:if="${booking.class_ != null}" th:text="${booking.class_.name}">Class</small>
+                                        </td>
+                                        <td>
+                                            <div th:text="${booking.dateDisplay}">Date</div>
+                                            <small class="booking-time" th:text="${booking.timeRangeDisplay}">Time</small>
+                                        </td>
+                                        <td th:text="${booking.durationDisplay}">Duration</td>
+                                        <td th:text="${booking.numberOfParticipants}">0</td>
+                                        <td>
+                                            <span class="badge"
+                                                  th:classappend="${booking.status.name() == 'CONFIRMED' ? 'bg-success' : 'bg-danger'}"
+                                                  th:text="${booking.statusDisplay}">Status</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button th:if="${booking.isConfirmed()}"
+                                                        th:onclick="'cancelBooking(\'' + ${booking.id} + '\')'"
+                                                        class="btn btn-outline-danger"
+                                                        title="Cancel booking">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booking Guidelines -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">Booking Guidelines:</h6>
+                    <ul class="mb-0">
+                        <li>Book rooms at least 1 hour in advance</li>
+                        <li>Maximum booking duration is 4 hours per session</li>
+                        <li>You can book rooms up to 3 months in advance</li>
+                        <li>Ensure the number of participants doesn't exceed room capacity</li>
+                        <li>Cancel bookings if you no longer need them</li>
+                        <li>Teachers can only book rooms for their own classes or activities</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script>
+function cancelBooking(bookingId) {
+    if (confirm('Are you sure you want to cancel this booking?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/teacher/booking/cancel';
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'bookingId';
+        input.value = bookingId;
+
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Set minimum datetime to current time
+document.addEventListener('DOMContentLoaded', function() {
+    const startTimeInput = document.getElementById('startTime');
+    const endTimeInput = document.getElementById('endTime');
+
+    const now = new Date();
+    const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+    startTimeInput.min = localDateTime;
+    endTimeInput.min = localDateTime;
+
+    // Set default values to next hour
+    const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
+    const defaultStart = new Date(nextHour.getTime() - nextHour.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const defaultEnd = new Date(nextHour.getTime() + 60 * 60 * 1000 - nextHour.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+    startTimeInput.value = defaultStart;
+    endTimeInput.value = defaultEnd;
+
+    // Validate end time is after start time
+    startTimeInput.addEventListener('change', function() {
+        const startTime = new Date(this.value);
+        const minEndTime = new Date(startTime.getTime() + 30 * 60 * 1000);
+        const minEndLocal = new Date(minEndTime.getTime() - minEndTime.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        endTimeInput.min = minEndLocal;
+
+        if (new Date(endTimeInput.value) <= startTime) {
+            endTimeInput.value = minEndLocal;
+        }
+    });
+});
+</script>
+</body>
+</html>

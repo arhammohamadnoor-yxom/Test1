@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head}">
+    <title>Room Availability - School Attendance App</title>
+    <style>
+        .room-card {
+            transition: transform 0.2s;
+            height: 100%;
+        }
+        .room-card:hover {
+            transform: translateY(-2px);
+        }
+        .room-unavailable {
+            opacity: 0.7;
+            border-left: 4px solid #dc3545;
+        }
+        .room-available {
+            border-left: 4px solid #28a745;
+        }
+        .time-slot {
+            font-size: 0.8rem;
+            padding: 2px 4px;
+            margin: 1px;
+            border-radius: 3px;
+        }
+        .busy-slot {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .free-slot {
+            background-color: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Room Availability</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a th:href="@{/student/dashboard}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <!-- Student Information -->
+            <div class="alert alert-info mb-4">
+                <h5><i class="bi bi-info-circle me-2"></i>Room Booking Information</h5>
+                <p class="mb-0">
+                    As a student, you can view room availability and schedules.
+                    If you need to book a room for your class activities, please contact your teacher.
+                </p>
+            </div>
+
+            <!-- My Classes -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">My Classes</h5>
+                </div>
+                <div class="card-body">
+                    <div th:if="${!#lists.isEmpty(enrolledClasses)}" class="row">
+                        <div class="col-md-6 mb-3" th:each="class : ${enrolledClasses}">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title" th:text="${class.name}">Class Name</h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="bi bi-book"></i> <span th:text="${class.subject}">Subject</span><br>
+                                            <i class="bi bi-person"></i> <span th:text="${class.teacher.getFullName()}">Teacher</span><br>
+                                            <i class="bi bi-geo-alt"></i> <span th:text="${class.location != null ? class.location : 'TBD'}">Location</span>
+                                        </small>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div th:if="${#lists.isEmpty(enrolledClasses)}" class="text-center py-4">
+                        <i class="bi bi-book text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">You are not enrolled in any classes yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Available Rooms -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Room Availability</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-4 col-md-6 mb-3" th:each="room : ${rooms}">
+                            <div class="card room-card h-100"
+                                 th:classappend="${room.isActive ? 'room-available' : 'room-unavailable'}">
+                                <div class="card-body">
+                                    <h6 class="card-title" th:text="${room.name}">Room Name</h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="bi bi-tag"></i> <span th:text="${room.type}">Type</span><br>
+                                            <i class="bi bi-people"></i> Capacity: <span th:text="${room.capacity}">0</span><br>
+                                            <i class="bi bi-geo-alt"></i> <span th:text="${room.location != null ? room.location : 'No location'}">Location</span>
+                                        </small>
+                                    </p>
+
+                                    <div class="mb-2">
+                                        <small class="text-info" th:if="${room.equipment != null}">
+                                            <i class="bi bi-tools"></i> Equipment available
+                                        </small>
+                                    </div>
+
+                                    <div th:if="${room.isActive}" class="mt-2">
+                                        <small class="text-success">
+                                            <i class="bi bi-check-circle"></i> Available
+                                        </small>
+                                    </div>
+                                    <div th:if="${!room.isActive}" class="mt-2">
+                                        <small class="text-danger">
+                                            <i class="bi bi-x-circle"></i> Unavailable
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Room Legend -->
+                    <div class="mt-4">
+                        <h6>Room Types:</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <small class="text-muted">
+                                    <strong>Science Labs:</strong> Makmal Bio, Makmal Kimia, Makmal Fizik
+                                </small>
+                            </div>
+                            <div class="col-md-3">
+                                <small class="text-muted">
+                                    <strong>Study Areas:</strong> Library, English Zone
+                                </small>
+                            </div>
+                            <div class="col-md-3">
+                                <small class="text-muted">
+                                    <strong>Meeting Rooms:</strong> Bilik Mesyuarat, Bilik APD
+                                </small>
+                            </div>
+                            <div class="col-md-3">
+                                <small class="text-muted">
+                                    <strong>Other:</strong> Bilik Agama, Dewan Makan
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guidelines -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">Room Usage Guidelines:</h6>
+                    <ul class="mb-0">
+                        <li>Students can view room availability but cannot book rooms directly</li>
+                        <li>Contact your teacher if you need a room for class activities</li>
+                        <li>Respect room schedules and booking times</li>
+                        <li>Keep rooms clean and tidy after use</li>
+                        <li>Report any maintenance issues to the administration</li>
+                        <li>Some rooms require teacher supervision (labs, workshops)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">Need a Room Booking?</h6>
+                    <p class="mb-0">
+                        Contact your teacher to request room bookings for class activities, study groups, or events.
+                        Teachers can book rooms through the system and will inform you of the schedule.
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script>
+// Add any interactive functionality if needed
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Room availability page loaded');
+});
+</script>
+</body>
+</html>

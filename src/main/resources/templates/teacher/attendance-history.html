@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/header :: head}">
+    <title>Attendance History - School Attendance App</title>
+    <style>
+        .attendance-summary {
+            font-size: 0.9rem;
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        .date-range-selector {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav th:replace="~{fragments/sidebar :: sidebar}"></nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Attendance History</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a th:href="@{/teacher/attendance}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Attendance
+                        </a>
+                        <a th:href="@{/teacher/attendance(classId=${classEntity.id})}" class="btn btn-primary">
+                            <i class="bi bi-calendar-check me-1"></i> Mark Attendance
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alert-container"></div>
+
+            <div th:if="${classEntity != null}">
+                <!-- Date Range Selector -->
+                <div class="date-range-selector">
+                    <h6>Attendance Period: <span th:text="${classEntity.name}">Class Name</span></h6>
+                    <p class="mb-0">
+                        <i class="bi bi-calendar-range"></i>
+                        <span th:text="${#temporals.format(startDate, 'MMM dd, yyyy')}">Start</span> -
+                        <span th:text="${#temporals.format(endDate, 'MMM dd, yyyy')}">End</span>
+                        <span class="text-muted ms-2">(<span th:text="${#numbers.formatDecimal(overallPercentage, 1, 1)}">0</span>% overall attendance)</span>
+                    </p>
+                </div>
+
+                <!-- Attendance Summary -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h6 class="card-title">Attendance Summary</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <h4 class="text-success" th:text="${dailyStats.getOrDefault(T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).PRESENT, 0)}">0</h4>
+                                    <p class="text-muted">Present</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <h4 class="text-danger" th:text="${dailyStats.getOrDefault(T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).ABSENT, 0)}">0</h4>
+                                    <p class="text-muted">Absent</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <h4 class="text-primary" th:text="${overallPercentage != null ? #numbers.formatDecimal(overallPercentage, 1, 1) + '%' : '0%'}">0%</h4>
+                                    <p class="text-muted">Attendance Rate</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="progress mt-3" style="height: 10px;">
+                            <div class="progress-bar" role="progressbar"
+                                 th:style="'width: ' + (${overallPercentage != null ? overallPercentage : 0}) + '%'"
+                                 th:classappend="${overallPercentage >= 90 ? 'bg-success' : (overallPercentage >= 75 ? 'bg-warning' : 'bg-danger')}"
+                                 th:attr="aria-valuenow=${overallPercentage != null ? overallPercentage : 0}"
+                                 aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Attendance Breakdown -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Daily Attendance Breakdown</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Day</th>
+                                        <th>Present</th>
+                                        <th>Absent</th>
+                                        <th>Total</th>
+                                        <th>Attendance Rate</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="date, stat : ${dailyStats}">
+                                        <td th:text="${#temporals.format(date, 'MMM dd, yyyy')}">Date</td>
+                                        <td th:text="${#temporals.format(date, 'EEEE')}">Day</td>
+                                        <td>
+                                            <span class="badge bg-success" th:text="${stat.getOrDefault(T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).PRESENT, 0)}">0</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-danger" th:text="${stat.getOrDefault(T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).ABSENT, 0)}">0</span>
+                                        </td>
+                                        <td th:text="${stat.values().stream().mapToLong(Long::longValue).sum()}">0</td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress me-2" style="width: 100px; height: 15px;">
+                                                    <div class="progress-bar" role="progressbar"
+                                                         th:style="'width: ' + (${stat.values().stream().mapToLong(s -> s.getOrDefault(T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).PRESENT, 0L)).sum() * 100.0 / stat.values().stream().mapToLong(Long::longValue).sum()}) + '%'"
+                                                         th:classappend="${(stat.values().stream().mapToLong(s -> s.getOrDefault(T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).PRESENT, 0L)).sum() * 100.0 / stat.values().stream().mapToLong(Long::longValue).sum()) >= 90 ? 'bg-success' : ((stat.values().stream().mapToLong(s -> s.getOrDefault(T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).PRESENT, 0L)).sum() * 100.0 / stat.values().stream().mapToLong(Long::longValue).sum()) >= 75 ? 'bg-warning' : 'bg-danger')}"
+                                                         th:attr="aria-valuenow=${stat.values().stream().mapToLong(s -> s.getOrDefault(T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).PRESENT, 0L)).sum() * 100.0 / stat.values().stream().mapToLong(Long::longValue).sum()}"
+                                                         aria-valuemin="0" aria-valuemax="100">
+                                                    </div>
+                                                </div>
+                                                <small th:text="${#numbers.formatDecimal((stat.values().stream().mapToLong(s -> s.getOrDefault(T(com.schoolapp.model.AttendanceRecord.AttendanceStatus).PRESENT, 0L)).sum() * 100.0 / stat.values().stream().mapToLong(Long::longValue).sum()), 1, 1)} + '%'">0%</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <a th:href="@{/teacher/attendance(classId=${classEntity.id}, date=${#temporals.format(date, 'yyyy-MM-dd')})}"
+                                               class="btn btn-sm btn-outline-primary" title="View details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div th:if="${#maps.isEmpty(dailyStats)}" class="text-center py-4">
+                            <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-2">No attendance records found for this period.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h6 class="card-title">Export Options</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <button onclick="exportToCSV()" class="btn btn-outline-primary">
+                                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>Export to CSV
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <button onclick="window.print()" class="btn btn-outline-secondary">
+                                    <i class="bi bi-printer me-2"></i>Print Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div th:if="${classEntity == null}" class="alert alert-warning">
+                <h5>Class Not Found</h5>
+                <p>The class information could not be retrieved. Please try again.</p>
+                <a th:href="@{/teacher/attendance}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Attendance
+                </a>
+            </div>
+        </main>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script>
+function exportToCSV() {
+    // Create CSV content
+    let csvContent = "Date,Day,Present,Absent,Total,Attendance Rate\n";
+
+    // Add data rows (in a real implementation, this would get the data from the server)
+    const table = document.querySelector('table tbody');
+    if (table) {
+        const rows = table.querySelectorAll('tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 6) {
+                const rowData = Array.from(cells).slice(0, 6).map(cell => cell.textContent.trim());
+                csvContent += rowData.join(',') + '\n';
+            }
+        });
+    }
+
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance-history-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// Add print styles
+const printStyles = `
+    @media print {
+        .btn-toolbar, .card-header .btn-group, .btn-outline-primary, .btn-outline-secondary {
+            display: none !important;
+        }
+        .card {
+            page-break-inside: avoid;
+        }
+    }
+`;
+
+const styleSheet = document.createElement('style');
+styleSheet.textContent = printStyles;
+document.head.appendChild(styleSheet);
+
+// Auto-refresh functionality (optional)
+function refreshData() {
+    window.location.reload();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        window.print();
+    }
+    if (e.ctrlKey && e.key === 'e') {
+        e.preventDefault();
+        exportToCSV();
+    }
+});
+</script>
+</body>
+</html>

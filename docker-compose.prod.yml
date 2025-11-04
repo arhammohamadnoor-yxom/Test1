@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - /var/lib/postgresql/data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    # Don't expose port externally in production
+    ports: []
+
+  app:
+    environment:
+      SPRING_PROFILES_ACTIVE: production
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: true
+    volumes:
+      - /var/log/schoolapp:/app/logs
+    # Don't expose port externally in production
+    ports: []
+
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/nginx/ssl:ro
+      - /var/log/nginx:/var/log/nginx

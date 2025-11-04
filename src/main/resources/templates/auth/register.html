@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: head}">
+    <title>Register - School Attendance App</title>
+</head>
+<body>
+<div class="login-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card login-card">
+                    <div class="card-body p-4">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-person-plus-fill text-primary" style="font-size: 3rem;"></i>
+                            <h3 class="mt-2">Create Account</h3>
+                            <p class="text-muted">Register for a new account</p>
+                        </div>
+
+                        <div id="alert-container"></div>
+
+                        <form th:action="@{/register}" method="post" th:object="${registerRequest}">
+                            <!-- User Information -->
+                            <h5 class="mb-3">Personal Information</h5>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="firstName" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="firstName" name="firstName"
+                                           th:field="*{firstName}" required>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('firstName')}"
+                                         th:errors="*{firstName}">Please enter your first name</div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="lastName" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="lastName" name="lastName"
+                                           th:field="*{lastName}" required>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('lastName')}"
+                                         th:errors="*{lastName}">Please enter your last name</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email Address</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-envelope"></i>
+                                    </span>
+                                    <input type="email" class="form-control" id="email" name="email"
+                                           th:field="*{email}" required
+                                           placeholder="Enter your email">
+                                </div>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}"
+                                     th:errors="*{email}">Please enter a valid email</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="phoneNumber" class="form-label">Phone Number (Optional)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-telephone"></i>
+                                    </span>
+                                    <input type="tel" class="form-control" id="phoneNumber" name="phoneNumber"
+                                           th:field="*{phoneNumber}"
+                                           placeholder="Enter your phone number">
+                                </div>
+                            </div>
+
+                            <!-- Role Selection -->
+                            <h5 class="mb-3 mt-4">Account Type</h5>
+
+                            <div class="mb-3">
+                                <label for="role" class="form-label">Register as:</label>
+                                <select class="form-select" id="role" name="role" th:field="*{role}" required>
+                                    <option value="">Select your role</option>
+                                    <option th:each="role : ${roles}" th:value="${role}" th:text="${role.name() + ' - ' + #strings.toLowerCase(role)}">Role</option>
+                                </select>
+                                <div class="form-text">Choose your role in the school system</div>
+                            </div>
+
+                            <!-- Conditional Fields -->
+                            <div id="studentFields" class="mb-3" style="display: none;">
+                                <label for="studentId" class="form-label">Student ID</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-card-text"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="studentId" name="studentId"
+                                           th:field="*{studentId}"
+                                           placeholder="Enter your student ID">
+                                </div>
+                                <div class="form-text">Required for student accounts</div>
+                            </div>
+
+                            <div id="staffFields" class="mb-3" style="display: none;">
+                                <label for="staffId" class="form-label">Staff ID</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-badge"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="staffId" name="staffId"
+                                           th:field="*{staffId}"
+                                           placeholder="Enter your staff ID">
+                                </div>
+                                <div class="form-text">Required for teacher and administrator accounts</div>
+                            </div>
+
+                            <!-- Password -->
+                            <h5 class="mb-3 mt-4">Security</h5>
+
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-lock"></i>
+                                    </span>
+                                    <input type="password" class="form-control" id="password" name="password"
+                                           th:field="*{password}" required
+                                           placeholder="Enter your password">
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('password')}"
+                                     th:errors="*{password}">Password must be at least 6 characters</div>
+                                <div class="form-text">Password must be at least 6 characters long</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-lock-fill"></i>
+                                    </span>
+                                    <input type="password" class="form-control" id="confirmPassword"
+                                           placeholder="Confirm your password">
+                                </div>
+                                <div class="invalid-feedback">Passwords do not match</div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-person-plus me-2"></i>Create Account
+                                </button>
+                            </div>
+
+                            <div class="text-center mt-3">
+                                <small class="text-muted">
+                                    Already have an account?
+                                    <a th:href="@{/login}" class="text-decoration-none">Login here</a>
+                                </small>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+<script>
+$(document).ready(function() {
+    // Role-based field visibility
+    $('#role').change(function() {
+        const role = $(this).val();
+        $('#studentFields, #staffFields').hide();
+
+        if (role === 'STUDENT') {
+            $('#studentFields').show();
+            $('#studentId').prop('required', true);
+            $('#staffId').prop('required', false);
+        } else if (role === 'TEACHER' || role === 'ADMINISTRATOR') {
+            $('#staffFields').show();
+            $('#staffId').prop('required', true);
+            $('#studentId').prop('required', false);
+        }
+    });
+
+    // Password visibility toggle
+    $('#togglePassword').click(function() {
+        const passwordField = $('#password');
+        const icon = $(this).find('i');
+
+        if (passwordField.attr('type') === 'password') {
+            passwordField.attr('type', 'text');
+            icon.removeClass('bi-eye').addClass('bi-eye-slash');
+        } else {
+            passwordField.attr('type', 'password');
+            icon.removeClass('bi-eye-slash').addClass('bi-eye');
+        }
+    });
+
+    // Password confirmation validation
+    $('#confirmPassword').on('input', function() {
+        const password = $('#password').val();
+        const confirmPassword = $(this).val();
+
+        if (password !== confirmPassword) {
+            $(this).addClass('is-invalid');
+            $(this).siblings('.invalid-feedback').text('Passwords do not match');
+        } else {
+            $(this).removeClass('is-invalid');
+        }
+    });
+
+    // Form submission validation
+    $('form').on('submit', function(e) {
+        const password = $('#password').val();
+        const confirmPassword = $('#confirmPassword').val();
+
+        if (password !== confirmPassword) {
+            e.preventDefault();
+            showAlert('danger', 'Passwords do not match');
+            return false;
+        }
+
+        const role = $('#role').val();
+        if (role === 'STUDENT' && !$('#studentId').val().trim()) {
+            e.preventDefault();
+            showAlert('danger', 'Student ID is required for students');
+            return false;
+        }
+
+        if ((role === 'TEACHER' || role === 'ADMINISTRATOR') && !$('#staffId').val().trim()) {
+            e.preventDefault();
+            showAlert('danger', 'Staff ID is required for teachers and administrators');
+            return false;
+        }
+    });
+});
+</script>
+</body>
+</html>
