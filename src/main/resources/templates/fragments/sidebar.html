@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<div th:fragment="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+    <div class="position-sticky pt-3">
+        <ul class="nav flex-column">
+            <!-- Dashboard -->
+            <li class="nav-item" sec:authorize="isAuthenticated()">
+                <a class="nav-link" th:href="@{/dashboard}">
+                    <i class="bi bi-house-door me-2"></i>
+                    Dashboard
+                </a>
+            </li>
+
+            <!-- Student Navigation -->
+            <div sec:authorize="hasRole('STUDENT')">
+                <li class="nav-item">
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>Student Menu</span>
+                    </h6>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/student/attendance}">
+                        <i class="bi bi-calendar-check me-2"></i>
+                        My Attendance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/student/classes}">
+                        <i class="bi bi-book me-2"></i>
+                        My Classes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/student/rooms}">
+                        <i class="bi bi-door-open me-2"></i>
+                        Room Availability
+                    </a>
+                </li>
+            </div>
+
+            <!-- Teacher Navigation -->
+            <div sec:authorize="hasRole('TEACHER')">
+                <li class="nav-item">
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>Teacher Menu</span>
+                    </h6>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/teacher/attendance}">
+                        <i class="bi bi-calendar-check me-2"></i>
+                        Mark Attendance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/teacher/my-classes}">
+                        <i class="bi bi-book me-2"></i>
+                        My Classes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/teacher/booking}">
+                        <i class="bi bi-door-open me-2"></i>
+                        Book Rooms
+                    </a>
+                </li>
+            </div>
+
+            <!-- Administrator Navigation -->
+            <div sec:authorize="hasRole('ADMINISTRATOR')">
+                <li class="nav-item">
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>Admin Menu</span>
+                    </h6>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/admin/users}">
+                        <i class="bi bi-people me-2"></i>
+                        Manage Users
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/admin/classes}">
+                        <i class="bi bi-book me-2"></i>
+                        Manage Classes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/admin/rooms}">
+                        <i class="bi bi-door-open me-2"></i>
+                        Manage Rooms
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/admin/attendance}">
+                        <i class="bi bi-calendar-check me-2"></i>
+                        Attendance Reports
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/admin/bookings}">
+                        <i class="bi bi-calendar-week me-2"></i>
+                        Booking Reports
+                    </a>
+                </li>
+            </div>
+        </ul>
+    </div>
+</div>
+</html>
